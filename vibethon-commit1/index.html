@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Codelab – Learn AI/ML Interactively</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav class="navbar">
+    <div class="logo">⚡ AI Codelab</div>
+    <div class="nav-links">
+      <a href="#home" onclick="showSection('home')">Home</a>
+      <a href="#learn" onclick="showSection('learn')">Learn</a>
+      <a href="#game" onclick="showSection('game')">Game</a>
+      <a href="#quiz" onclick="showSection('quiz')">Quiz</a>
+    </div>
+    <div class="xp-badge">XP: <span id="xp-display">0</span></div>
+  </nav>
+
+  <!-- HOME SECTION -->
+  <section id="home" class="section active">
+    <div class="hero">
+      <div class="hero-tag">🚀</div>
+      <h1 class="hero-title">Learn <span class="accent">AI & ML</span><br/>The Fun Way</h1>
+      <p class="hero-sub">Modules · Mini-Games · Quizzes · Real World Understanding</p>
+      <div class="hero-btns">
+        <button class="btn-primary" onclick="showSection('learn')">Start Learning →</button>
+        <button class="btn-ghost" onclick="showSection('quiz')">Take Quiz</button>
+      </div>
+      <div class="stats-row">
+        <div class="stat"><span>4</span>Modules</div>
+        <div class="stat"><span>1</span>Mini-Game</div>
+        <div class="stat"><span>10</span>Quiz Q's</div>
+        <div class="stat"><span>∞</span>Fun</div>
+      </div>
+    </div>
+    <div class="floating-blobs">
+      <div class="blob b1"></div>
+      <div class="blob b2"></div>
+      <div class="blob b3"></div>
+    </div>
+  </section>
+
+  <!-- LEARN SECTION -->
+  <section id="learn" class="section">
+    <div class="section-header">
+      <h2>📚 Learning Modules</h2>
+      <p>Pick a topic and level up your AI knowledge</p>
+    </div>
+    <div class="modules-grid">
+      <div class="module-card" onclick="openModule(0)">
+        <div class="module-icon">🧠</div>
+        <h3>What is AI?</h3>
+        <p>Understand intelligence in machines — from rule-based systems to neural networks.</p>
+        <div class="module-meta"><span class="tag">Beginner</span><span class="time">5 min</span></div>
+      </div>
+      <div class="module-card" onclick="openModule(1)">
+        <div class="module-icon">📈</div>
+        <h3>Machine Learning 101</h3>
+        <p>How machines learn from data without being explicitly programmed.</p>
+        <div class="module-meta"><span class="tag">Beginner</span><span class="time">6 min</span></div>
+      </div>
+      <div class="module-card" onclick="openModule(2)">
+        <div class="module-icon">🕸️</div>
+        <h3>Neural Networks</h3>
+        <p>The brain-inspired architecture powering modern AI breakthroughs.</p>
+        <div class="module-meta"><span class="tag">Intermediate</span><span class="time">7 min</span></div>
+      </div>
+      <div class="module-card" onclick="openModule(3)">
+        <div class="module-icon">🌍</div>
+        <h3>AI in Real World</h3>
+        <p>Spam filters, self-driving cars, ChatGPT — AI is everywhere.</p>
+        <div class="module-meta"><span class="tag">Applied</span><span class="time">5 min</span></div>
+      </div>
+    </div>
+
+    <!-- MODULE READER -->
+    <div id="module-reader" class="module-reader hidden">
+      <button class="close-btn" onclick="closeModule()">← Back to Modules</button>
+      <div id="module-content"></div>
+      <div class="module-nav">
+        <button id="prev-page" class="btn-ghost" onclick="changePage(-1)">← Prev</button>
+        <span id="page-indicator"></span>
+        <button id="next-page" class="btn-primary" onclick="changePage(1)">Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- GAME SECTION -->
+  <section id="game" class="section">
+    <div class="section-header">
+      <h2>🎮 AI Term Matcher</h2>
+      <p>Match AI terms to their definitions before time runs out!</p>
+    </div>
+    <div class="game-container">
+      <div class="game-hud">
+        <div class="hud-item">Score: <strong id="game-score">0</strong></div>
+        <div class="hud-item">Time: <strong id="game-timer">30</strong>s</div>
+        <div class="hud-item">Combo: <strong id="combo">x1</strong></div>
+      </div>
+      <div id="game-area">
+        <div class="game-cols">
+          <div class="game-col" id="terms-col">
+            <h4>Terms</h4>
+          </div>
+          <div class="game-col" id="defs-col">
+            <h4>Definitions</h4>
+          </div>
+        </div>
+        <div id="game-feedback" class="game-feedback"></div>
+      </div>
+      <div id="game-result" class="game-result hidden">
+        <h3 id="result-title"></h3>
+        <p id="result-msg"></p>
+        <button class="btn-primary" onclick="startGame()">Play Again</button>
+      </div>
+      <button class="btn-primary" id="start-game-btn" onclick="startGame()">Start Game</button>
+    </div>
+  </section>
+
+  <!-- QUIZ SECTION -->
+  <section id="quiz" class="section">
+    <div class="section-header">
+      <h2>🧩 AI/ML Quiz</h2>
+      <p>Test your knowledge — 10 questions, instant feedback!</p>
+    </div>
+    <div class="quiz-container">
+      <div id="quiz-start">
+        <div class="quiz-intro-card">
+          <div class="quiz-intro-icon">🎯</div>
+          <h3>Ready to Test Your AI Knowledge?</h3>
+          <ul>
+            <li>✅ 10 Multiple Choice Questions</li>
+            <li>⚡ Instant Feedback on Each Answer</li>
+            <li>🏆 Score + XP at the End</li>
+          </ul>
+          <button class="btn-primary" onclick="startQuiz()">Begin Quiz →</button>
+        </div>
+      </div>
+      <div id="quiz-active" class="hidden">
+        <div class="quiz-progress-bar"><div id="quiz-progress-fill"></div></div>
+        <div class="quiz-meta">
+          <span id="q-number">Q 1 of 10</span>
+          <span id="q-score-live">Score: 0</span>
+        </div>
+        <div class="quiz-card">
+          <p id="quiz-question"></p>
+          <div id="quiz-options" class="options-grid"></div>
+          <div id="quiz-feedback" class="quiz-feedback hidden"></div>
+          <button id="next-q-btn" class="btn-primary hidden" onclick="nextQuestion()">Next Question →</button>
+        </div>
+      </div>
+      <div id="quiz-result" class="hidden">
+        <div class="result-card">
+          <div id="result-emoji" class="result-emoji"></div>
+          <h2 id="result-score-text"></h2>
+          <p id="result-comment"></p>
+          <div id="result-breakdown"></div>
+          <button class="btn-primary" onclick="restartQuiz()">Try Again</button>
+          <button class="btn-ghost" onclick="showSection('learn')">Study More</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script src="script.js"></script>
+</body>
+</html>
