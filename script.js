@@ -11,6 +11,8 @@ function initAuth() {
   const savedUser = localStorage.getItem('aicodelab_user');
   if (savedUser) {
     user = JSON.parse(savedUser);
+    if (!user.completedModules) user.completedModules = [];
+    if (!user.quizScores) user.quizScores = {};
     xp = user.xp || 0;
     updateNavForUser();
   }
@@ -55,12 +57,38 @@ function toggleAuthMode() {
 function handleAuth(e) {
   e.preventDefault();
   const email = document.getElementById('auth-email').value;
-  // In a real app, send to backend. Here, mock it:
-  user = { email, xp: xp };
+  const password = document.getElementById('auth-password').value;
+
+  if (!email || !password) {
+    showFeedbackToast('Please fill all fields.');
+    return;
+  }
+  if (!email.includes('@') || !email.includes('.')) {
+    showFeedbackToast('Please enter a valid email address.');
+    return;
+  }
+
+  // Load existing user or create new
+  let savedUser = localStorage.getItem('aicodelab_user');
+  if (savedUser) {
+    savedUser = JSON.parse(savedUser);
+    if (savedUser.email === email) {
+      user = savedUser;
+      xp = user.xp || 0;
+    } else {
+      user = { email, xp: 0, completedModules: [], quizScores: {} };
+      xp = 0;
+    }
+  } else {
+    user = { email, xp: xp, completedModules: [], quizScores: {} };
+  }
+  
   localStorage.setItem('aicodelab_user', JSON.stringify(user));
   updateNavForUser();
+  document.getElementById('xp-display').textContent = xp;
   toggleAuthModal();
-  showFeedbackToast('Welcome to AI Codelab!');
+  showFeedbackToast('Welcome to LearnoHub AI!');
+  showSection('dashboard');
 }
 
 function addXP(amount) {
@@ -245,7 +273,7 @@ function renderModulePage() {
   document.getElementById('prev-page').style.visibility =
     currentPage === 0 ? 'hidden' : 'visible';
   document.getElementById('next-page').textContent =
-    currentPage === mod.pages.length - 1 ? '✅ Done' : 'Next →';
+    currentPage === mod.pages.length - 1 ? '✅ Finish' : 'Next →';
 }
 
 function changePage(dir) {
@@ -253,6 +281,10 @@ function changePage(dir) {
   const newPage = currentPage + dir;
   if (newPage < 0) return;
   if (newPage >= mod.pages.length) {
+    if (user && !user.completedModules.includes(currentModule)) {
+      user.completedModules.push(currentModule);
+      localStorage.setItem('aicodelab_user', JSON.stringify(user));
+    }
     addXP(20);
     closeModule();
     showFeedbackToast('🎉 Module complete! +20 XP earned!');
@@ -447,75 +479,40 @@ function endGame(won) {
 }
 
 // ─── QUIZ DATA ───────────────────────────────
-const quizQuestions = [
-  {
-    q: "What does AI stand for?",
-    options: ["Automated Intelligence", "Artificial Intelligence", "Automated Information", "Analytical Intelligence"],
-    correct: 1,
-    explanation: "AI stands for Artificial Intelligence — simulating human intelligence in machines."
-  },
-  {
-    q: "Which type of ML uses labelled training data?",
-    options: ["Unsupervised Learning", "Reinforcement Learning", "Supervised Learning", "Transfer Learning"],
-    correct: 2,
-    explanation: "Supervised Learning trains on labelled data — questions paired with correct answers."
-  },
-  {
-    q: "A neural network is inspired by the human ___?",
-    options: ["Heart", "Lungs", "Brain", "Eyes"],
-    correct: 2,
-    explanation: "Neural networks mimic how neurons in the human brain are connected and communicate."
-  },
-  {
-    q: "Which algorithm learns by trial and error with rewards?",
-    options: ["Supervised Learning", "Reinforcement Learning", "Clustering", "Regression"],
-    correct: 1,
-    explanation: "Reinforcement Learning agents learn by receiving rewards for good actions and penalties for bad ones."
-  },
-  {
-    q: "What does NLP stand for?",
-    options: ["Neural Learning Protocol", "Non-Linear Processing", "Natural Language Processing", "Numeric Logic Programming"],
-    correct: 2,
-    explanation: "NLP = Natural Language Processing. It enables AI to understand and generate human language."
-  },
-  {
-    q: "When a model performs well on training data but poorly on new data, this is called ___?",
-    options: ["Underfitting", "Overfitting", "Normalisation", "Bias"],
-    correct: 1,
-    explanation: "Overfitting: the model memorises training examples instead of learning generalizable patterns."
-  },
-  {
-    q: "Which company built the AI that defeated the world Go champion?",
-    options: ["OpenAI", "Meta", "DeepMind", "Microsoft"],
-    correct: 2,
-    explanation: "DeepMind's AlphaGo defeated world champion Lee Sedol in 2016 using reinforcement learning."
-  },
-  {
-    q: "What is the term for the dataset used to teach an ML model?",
-    options: ["Test Data", "Training Data", "Validation Data", "Sample Data"],
-    correct: 1,
-    explanation: "Training data is the labelled dataset used to teach the model to recognise patterns."
-  },
-  {
-    q: "Which of these is an example of Narrow AI?",
-    options: ["A robot that can do any job", "Siri answering questions", "HAL 9000 from 2001", "A conscious computer"],
-    correct: 1,
-    explanation: "Siri is Narrow AI — designed for one specific task (voice assistance). General AI doesn't exist yet."
-  },
-  {
-    q: "'Deep' in Deep Learning refers to ___?",
-    options: ["How complex the code is", "Number of hidden layers in neural networks", "Speed of computation", "The size of training data"],
-    correct: 1,
-    explanation: "Deep Learning = neural networks with many hidden layers. More layers = deeper = more complex patterns learned."
-  }
-];
+const quizData = {
+  Beginner: [
+    { q: "What does AI stand for?", options: ["Automated Intelligence", "Artificial Intelligence", "Automated Information", "Analytical Intelligence"], correct: 1, explanation: "AI stands for Artificial Intelligence — simulating human intelligence in machines." },
+    { q: "Which of these is an example of Narrow AI?", options: ["A robot that can do any job", "Siri answering questions", "HAL 9000 from 2001", "A conscious computer"], correct: 1, explanation: "Siri is Narrow AI — designed for one specific task (voice assistance). General AI doesn't exist yet." },
+    { q: "What is the term for the dataset used to teach an ML model?", options: ["Test Data", "Training Data", "Validation Data", "Sample Data"], correct: 1, explanation: "Training data is the labelled dataset used to teach the model to recognise patterns." },
+    { q: "Which type of ML uses labelled training data?", options: ["Unsupervised Learning", "Reinforcement Learning", "Supervised Learning", "Transfer Learning"], correct: 2, explanation: "Supervised Learning trains on labelled data — questions paired with correct answers." },
+    { q: "Machine Learning is a subset of ___?", options: ["Deep Learning", "Artificial Intelligence", "Data Science", "Robotics"], correct: 1, explanation: "Machine Learning is a subset of AI where machines learn from data." }
+  ],
+  Intermediate: [
+    { q: "A neural network is inspired by the human ___?", options: ["Heart", "Lungs", "Brain", "Eyes"], correct: 2, explanation: "Neural networks mimic how neurons in the human brain are connected and communicate." },
+    { q: "Which algorithm learns by trial and error with rewards?", options: ["Supervised Learning", "Reinforcement Learning", "Clustering", "Regression"], correct: 1, explanation: "Reinforcement Learning agents learn by receiving rewards for good actions and penalties for bad ones." },
+    { q: "When a model performs well on training data but poorly on new data, this is called ___?", options: ["Underfitting", "Overfitting", "Normalisation", "Bias"], correct: 1, explanation: "Overfitting: the model memorises training examples instead of learning generalizable patterns." },
+    { q: "Which company built the AI that defeated the world Go champion?", options: ["OpenAI", "Meta", "DeepMind", "Microsoft"], correct: 2, explanation: "DeepMind's AlphaGo defeated world champion Lee Sedol in 2016 using reinforcement learning." },
+    { q: "What is the role of Hidden Layers in a Neural Network?", options: ["To store data permanently", "To directly output results", "To process and find patterns in data", "To display UI"], correct: 2, explanation: "Hidden layers process the input data and extract complex features/patterns." }
+  ],
+  Advanced: [
+    { q: "What does NLP stand for?", options: ["Neural Learning Protocol", "Non-Linear Processing", "Natural Language Processing", "Numeric Logic Programming"], correct: 2, explanation: "NLP = Natural Language Processing. It enables AI to understand and generate human language." },
+    { q: "'Deep' in Deep Learning refers to ___?", options: ["How complex the code is", "Number of hidden layers in neural networks", "Speed of computation", "The size of training data"], correct: 1, explanation: "Deep Learning = neural networks with many hidden layers. More layers = deeper = more complex patterns learned." },
+    { q: "Which of the following is NOT a common activation function?", options: ["ReLU", "Sigmoid", "Linear Regression", "Tanh"], correct: 2, explanation: "Linear Regression is an algorithm, not an activation function (like ReLU or Sigmoid)." },
+    { q: "What is Gradient Descent used for?", options: ["Increasing data size", "Optimizing and minimizing model error", "Adding layers to networks", "Translating text"], correct: 1, explanation: "Gradient descent is an optimization algorithm used to minimize the cost/error function." },
+    { q: "Which type of learning is typically used for clustering data into groups?", options: ["Supervised Learning", "Unsupervised Learning", "Reinforcement Learning", "Transfer Learning"], correct: 1, explanation: "Unsupervised learning finds hidden patterns and clusters unlabelled data." }
+  ]
+};
 
 // ─── QUIZ LOGIC ──────────────────────────────
+let currentQuizLevel = 'Beginner';
+let currentQuizQuestions = [];
 let quizIndex = 0;
 let quizScore = 0;
 let quizAnswers = [];
 
-function startQuiz() {
+function startQuiz(level) {
+  currentQuizLevel = level;
+  currentQuizQuestions = quizData[level];
   quizIndex = 0;
   quizScore = 0;
   quizAnswers = [];
@@ -526,11 +523,11 @@ function startQuiz() {
 }
 
 function renderQuestion() {
-  const q = quizQuestions[quizIndex];
-  const progress = ((quizIndex) / quizQuestions.length) * 100;
+  const q = currentQuizQuestions[quizIndex];
+  const progress = ((quizIndex) / currentQuizQuestions.length) * 100;
 
   document.getElementById('quiz-progress-fill').style.width = progress + '%';
-  document.getElementById('q-number').textContent = `Q ${quizIndex + 1} of ${quizQuestions.length}`;
+  document.getElementById('q-number').textContent = `Q ${quizIndex + 1} of ${currentQuizQuestions.length}`;
   document.getElementById('q-score-live').textContent = `Score: ${quizScore}`;
   document.getElementById('quiz-question').textContent = q.q;
   document.getElementById('quiz-feedback').className = 'quiz-feedback hidden';
@@ -549,7 +546,7 @@ function renderQuestion() {
 }
 
 function selectAnswer(index, btn) {
-  const q = quizQuestions[quizIndex];
+  const q = currentQuizQuestions[quizIndex];
   const allBtns = document.querySelectorAll('.option-btn');
   allBtns.forEach(b => b.disabled = true);
 
@@ -576,7 +573,7 @@ function selectAnswer(index, btn) {
 
 function nextQuestion() {
   quizIndex++;
-  if (quizIndex >= quizQuestions.length) {
+  if (quizIndex >= currentQuizQuestions.length) {
     showQuizResult();
   } else {
     renderQuestion();
@@ -588,14 +585,14 @@ function showQuizResult() {
   document.getElementById('quiz-result').classList.remove('hidden');
   document.getElementById('quiz-progress-fill').style.width = '100%';
 
-  const pct = Math.round((quizScore / quizQuestions.length) * 100);
+  const pct = Math.round((quizScore / currentQuizQuestions.length) * 100);
   let emoji = '😐', comment = "Keep studying — you'll get there!";
-  if (pct >= 90) { emoji = '🏆'; comment = "Outstanding! You're an AI genius!"; }
-  else if (pct >= 70) { emoji = '🎉'; comment = "Great work! Strong AI foundation!"; }
-  else if (pct >= 50) { emoji = '👍'; comment = "Good effort! Review the modules."; }
+  if (pct >= 80) { emoji = '🏆'; comment = "Outstanding! You're an AI genius!"; }
+  else if (pct >= 60) { emoji = '🎉'; comment = "Great work! Strong foundation!"; }
+  else if (pct >= 40) { emoji = '👍'; comment = "Good effort! Review the modules."; }
 
   document.getElementById('result-emoji').textContent = emoji;
-  document.getElementById('result-score-text').textContent = `${quizScore} / ${quizQuestions.length} — ${pct}%`;
+  document.getElementById('result-score-text').textContent = `${quizScore} / ${currentQuizQuestions.length} — ${pct}%`;
   document.getElementById('result-comment').textContent = comment;
 
   const correct = quizAnswers.filter(Boolean).length;
@@ -606,6 +603,12 @@ function showQuizResult() {
     <div class="breakdown-item">⚡ XP Earned: <span>${correct * 10}</span></div>
     <div class="breakdown-item">🎯 Accuracy: <span>${pct}%</span></div>
   `;
+
+  // Store quiz score in user profile
+  if (user) {
+    user.quizScores[currentQuizLevel] = Math.max(user.quizScores[currentQuizLevel] || 0, quizScore);
+    localStorage.setItem('aicodelab_user', JSON.stringify(user));
+  }
 }
 
 function restartQuiz() {
@@ -620,9 +623,35 @@ function updateDashboard() {
     document.getElementById('dash-xp').textContent = xp;
     document.getElementById('dash-board-xp').textContent = xp + ' XP';
     
-    // Mock module completion based on XP roughly
-    const modulesCompleted = Math.min(4, Math.floor(xp / 20));
+    // Modules completion
+    const modulesCompleted = user.completedModules ? user.completedModules.length : 0;
     document.getElementById('dash-modules').textContent = `${modulesCompleted} / 4`;
+
+    // Quiz scores
+    const quizScores = user.quizScores || {};
+    const quizList = document.getElementById('dash-quiz-scores');
+    quizList.innerHTML = `
+      <li>Beginner: <span style="color: var(--${quizScores['Beginner'] !== undefined ? 'green' : 'accent'});">${quizScores['Beginner'] !== undefined ? quizScores['Beginner'] + '/5' : 'Not taken'}</span></li>
+      <li>Intermediate: <span style="color: var(--${quizScores['Intermediate'] !== undefined ? 'green' : 'accent'});">${quizScores['Intermediate'] !== undefined ? quizScores['Intermediate'] + '/5' : 'Not taken'}</span></li>
+      <li>Advanced: <span style="color: var(--${quizScores['Advanced'] !== undefined ? 'green' : 'accent'});">${quizScores['Advanced'] !== undefined ? quizScores['Advanced'] + '/5' : 'Not taken'}</span></li>
+    `;
+
+    // Overall progress calculation (Modules 40%, Quizzes 60%)
+    let quizzesTaken = 0;
+    let totalQuizScore = 0;
+    ['Beginner', 'Intermediate', 'Advanced'].forEach(level => {
+      if (quizScores[level] !== undefined) {
+        quizzesTaken++;
+        totalQuizScore += quizScores[level];
+      }
+    });
+
+    const moduleProgress = (modulesCompleted / 4) * 40;
+    const quizProgress = quizzesTaken > 0 ? (totalQuizScore / 15) * 60 : 0;
+    const overallProgress = Math.round(moduleProgress + quizProgress);
+
+    document.getElementById('dash-progress-text').textContent = `${overallProgress}%`;
+    document.getElementById('dash-progress-fill').style.width = `${overallProgress}%`;
   }
 }
 
