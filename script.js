@@ -1,9 +1,4 @@
-/* =============================================
-   AI CODELAB — script.js
-   Features: Section nav, Modules, Game, Quiz
-   ============================================= */
 
-// ─── GLOBAL STATE ───────────────────────────
 let xp = 0;
 let user = null;
 
