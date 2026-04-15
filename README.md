@@ -1,2 +1,2 @@
 # vibethon-OneVision-spot
-This repository includes the project made for vibethon echnotsav 2k26 .
+This repository includes the project made for vibethon technotsav 2k26 .
