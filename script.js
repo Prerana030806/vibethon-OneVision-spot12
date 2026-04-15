@@ -5,17 +5,84 @@
 
 // ─── GLOBAL STATE ───────────────────────────
 let xp = 0;
+let user = null;
+
+function initAuth() {
+  const savedUser = localStorage.getItem('aicodelab_user');
+  if (savedUser) {
+    user = JSON.parse(savedUser);
+    xp = user.xp || 0;
+    updateNavForUser();
+  }
+  document.getElementById('xp-display').textContent = xp;
+}
+
+function updateNavForUser() {
+  const authBtn = document.getElementById('auth-btn');
+  const navDash = document.getElementById('nav-dashboard');
+  if (user) {
+    authBtn.textContent = 'Logout';
+    navDash.classList.remove('hidden');
+  } else {
+    authBtn.textContent = 'Login';
+    navDash.classList.add('hidden');
+  }
+}
+
+let authMode = 'login';
+function toggleAuthModal() {
+  if (user && document.getElementById('auth-btn').textContent === 'Logout') {
+    // Logout
+    user = null;
+    xp = 0;
+    localStorage.removeItem('aicodelab_user');
+    updateNavForUser();
+    document.getElementById('xp-display').textContent = xp;
+    showSection('home');
+    showFeedbackToast('Logged out successfully');
+    return;
+  }
+  const modal = document.getElementById('auth-modal');
+  modal.classList.toggle('hidden');
+}
+
+function toggleAuthMode() {
+  authMode = authMode === 'login' ? 'register' : 'login';
+  document.getElementById('auth-title').textContent = authMode === 'login' ? 'Login' : 'Create Account';
+  document.getElementById('auth-toggle-text').textContent = authMode === 'login' ? "Don't have an account?" : "Already have an account?";
+}
+
+function handleAuth(e) {
+  e.preventDefault();
+  const email = document.getElementById('auth-email').value;
+  // In a real app, send to backend. Here, mock it:
+  user = { email, xp: xp };
+  localStorage.setItem('aicodelab_user', JSON.stringify(user));
+  updateNavForUser();
+  toggleAuthModal();
+  showFeedbackToast('Welcome to AI Codelab!');
+}
 
 function addXP(amount) {
   xp += amount;
   document.getElementById('xp-display').textContent = xp;
+  if (user) {
+    user.xp = xp;
+    localStorage.setItem('aicodelab_user', JSON.stringify(user));
+  }
 }
+
+// Call initAuth on load
+document.addEventListener('DOMContentLoaded', initAuth);
 
 // ─── NAVIGATION ─────────────────────────────
 function showSection(id) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   window.scrollTo(0, 0);
+  if (id === 'dashboard') {
+    updateDashboard();
+  }
 }
 
 // ─── MODULE DATA ────────────────────────────
@@ -544,4 +611,99 @@ function showQuizResult() {
 function restartQuiz() {
   document.getElementById('quiz-result').classList.add('hidden');
   document.getElementById('quiz-start').classList.remove('hidden');
+}
+
+// ─── DASHBOARD ──────────────────────────────
+function updateDashboard() {
+  if (user) {
+    document.getElementById('dash-email').textContent = user.email;
+    document.getElementById('dash-xp').textContent = xp;
+    document.getElementById('dash-board-xp').textContent = xp + ' XP';
+    
+    // Mock module completion based on XP roughly
+    const modulesCompleted = Math.min(4, Math.floor(xp / 20));
+    document.getElementById('dash-modules').textContent = `${modulesCompleted} / 4`;
+  }
+}
+
+// ─── PYTHON PLAYGROUND ──────────────────────
+let pyodideReady = false;
+let pyodideInstance = null;
+
+async function initPyodide() {
+  if (pyodideReady) return;
+  document.getElementById('python-output').textContent = 'Loading Python engine (Pyodide)...';
+  try {
+    pyodideInstance = await loadPyodide();
+    pyodideReady = true;
+    document.getElementById('python-output').textContent = 'Ready! Click "Run Code" to execute.';
+  } catch (err) {
+    document.getElementById('python-output').textContent = 'Error loading Python engine.';
+  }
+}
+
+async function runPython() {
+  const outputEl = document.getElementById('python-output');
+  if (!pyodideReady) {
+    await initPyodide();
+  }
+  
+  const code = document.getElementById('python-code').value;
+  outputEl.textContent = 'Running...';
+  
+  try {
+    // Capture stdout
+    pyodideInstance.runPython(`
+import sys
+import io
+sys.stdout = io.StringIO()
+    `);
+    
+    pyodideInstance.runPython(code);
+    
+    const stdout = pyodideInstance.runPython("sys.stdout.getvalue()");
+    outputEl.textContent = stdout || "Code executed successfully with no output.";
+    addXP(5); // Reward for running code
+  } catch (err) {
+    outputEl.textContent = err;
+  }
+}
+
+// Initialize Pyodide early if possible, or lazy load
+setTimeout(initPyodide, 2000);
+
+// ─── SPAM SIMULATOR ─────────────────────────
+function checkSpam() {
+  const input = document.getElementById('spam-input').value.toLowerCase();
+  const resultEl = document.getElementById('spam-result');
+  resultEl.classList.remove('hidden');
+  
+  if (!input) {
+    resultEl.textContent = "Please enter a message.";
+    resultEl.style.background = 'var(--surface2)';
+    resultEl.style.color = 'var(--text)';
+    return;
+  }
+  
+  // Simple heuristic-based naive mock model
+  const spamKeywords = ['lottery', 'win', 'free', 'prize', 'urgent', 'click here', 'claim', 'money', 'cash', 'viagra', 'investment'];
+  let spamScore = 0;
+  
+  spamKeywords.forEach(word => {
+    if (input.includes(word)) spamScore += 1;
+  });
+  
+  if (spamScore >= 2 || (spamScore === 1 && input.includes('!'))) {
+    resultEl.textContent = `🚨 CLASSIFIED AS SPAM (Confidence: ${Math.min(99, 50 + spamScore * 15)}%)`;
+    resultEl.style.background = 'rgba(255, 82, 82, 0.1)';
+    resultEl.style.color = 'var(--red)';
+    resultEl.style.border = '1px solid var(--red)';
+  } else {
+    resultEl.textContent = `✅ CLASSIFIED AS SAFE (Confidence: ${Math.min(99, 70 + (2 - spamScore) * 10)}%)`;
+    resultEl.style.background = 'rgba(0, 230, 118, 0.1)';
+    resultEl.style.color = 'var(--green)';
+    resultEl.style.border = '1px solid var(--green)';
+  }
+  
+  addXP(2); // Small reward
 }
